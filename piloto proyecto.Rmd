@@ -1,0 +1,540 @@
+
+title: "Análisis Económico Mundial: PIB, Desempleo e Inflación"
+author: "Brandon Rodríguez Ortiz"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    theme: cerulean
+    highlight: tango
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = 'center',
+  fig.width = 8,
+  fig.height = 5
+)
+
+
+# --- Librerías necesarias ---
+
+library(ggplot2)
+library(dplyr)
+library(maps)
+```
+# --- Cargar datos ---
+```{r}
+data <- read.csv("base_de_datos.csv")
+```
+# --- Mapa base ---
+```{r}
+world <- map_data("world")
+```
+# ==========================================================
+# 1️⃣ PIB vs TASA DE DESEMPLEO (MAPA GLOBAL)
+# ==========================================================
+```{r}
+
+ggplot() +
+  geom_map(data = world, map = world,
+           aes(x = long, y = lat, map_id = region),
+           color = "gray80", fill = "gray95", size = 0.3) +
+  geom_point(data = data,
+             aes(x = longitude, y = latitude,
+                 size = GDP, color = Jobless.Rate),
+             alpha = 0.7) +
+  scale_size_continuous(range = c(2, 10)) +
+  scale_color_gradient(low = "skyblue", high = "darkred") +
+  labs(
+    title = "PIB y Tasa de Desempleo en el Mundo",
+    subtitle = "El tamaño del punto representa el PIB (miles de millones USD)\nEl color representa la tasa de desempleo (%)",
+    x = "Longitud",
+    y = "Latitud",
+    size = "PIB",
+    color = "Tasa de desempleo"
+  ) +
+  theme_minimal()
+```
+# ==========================================================
+# 2️⃣ RELACIÓN PIB vs DESEMPLEO (TENDENCIA LINEAL)
+# ==========================================================
+ggplot(data, aes(x = GDP, y = Jobless.Rate, color = region)) +
+  geom_point(size = 3, alpha = 0.8) +
+  scale_x_log10() +
+  geom_smooth(method = "lm", color = "black") +
+  labs(
+    title = "Relación entre el PIB y la Tasa de Desempleo",
+    subtitle = "Escala logarítmica del PIB. La línea negra muestra la tendencia lineal.",
+    x = "PIB (escala logarítmica, miles de millones USD)",
+    y = "Tasa de desempleo (%)",
+    color = "Región"
+  ) +
+  theme_minimal()
+
+# ==========================================================
+# 3️⃣ INFLACIÓN PROMEDIO POR REGIÓN
+# ==========================================================
+```{r}
+inflacion_region <- data %>%
+  group_by(region) %>%
+  summarise(inflacion_promedio = mean(Inflation.Rate, na.rm = TRUE))
+
+ggplot(inflacion_region, aes(x = reorder(region, inflacion_promedio), y = inflacion_promedio, fill = inflacion_promedio)) +
+  geom_col() +
+  coord_flip() +
+  scale_fill_gradient(low = "skyblue", high = "darkred") +
+  labs(
+    title = "Inflación promedio por región",
+    subtitle = "Comparación del nivel general de inflación en el mundo",
+    x = "Región",
+    y = "Inflación promedio (%)",
+    fill = "Nivel de inflación"
+  ) +
+  theme_minimal()
+```
+
+# ==========================================================
+# 4️⃣ MAPA MUNDIAL DE INFLACIÓN
+# ==========================================================
+```{r}
+inflacion_map <- data %>% select(name, Inflation.Rate) %>% na.omit()
+mapa_inflacion <- left_join(world, inflacion_map, by = c("region" = "name"))
+
+ggplot(mapa_inflacion, aes(x = long, y = lat, group = group, fill = Inflation.Rate)) +
+  geom_polygon(color = "gray70", size = 0.2) +
+  scale_fill_gradientn(
+    colors = c("darkblue", "skyblue", "yellow", "orange", "red", "darkred"),
+    na.value = "white",
+    name = "Inflación (%)"
+  ) +
+  labs(
+    title = "Mapa mundial de inflación",
+    subtitle = "El color representa la tasa de inflación promedio por país"
+  ) +
+  theme_minimal() +
+  theme(axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.grid = element_blank())
+```
+# ==========================================================
+# 🧩 CONCLUSIONES
+# ==========================================================
+cat("
+Conclusiones Generales:
+1. Existe una relación inversa entre el PIB y la tasa de desempleo.
+2. Las regiones con mayor inflación muestran menor estabilidad económica.
+3. África y América Latina presentan mayores desafíos en desempleo e inflación.
+4. Europa y Oceanía mantienen economías más estables con baja inflación.
+")
+
+
+
+
+
+
+
+
+
+
+
+
+## Carga de datos y librerías
+
+```{r}
+# Instalar (si no tienes) y cargar librerías necesarias
+#install.packages("ggplot2")
+library(ggplot2)
+
+# Cargar base de datos
+data <- read.csv("base_de_datos.csv")
+
+# Limpiar datos: eliminar filas con valores faltantes en las variables clave
+data <- na.omit(data[, c("GDP", "Jobless.Rate", "name")])
+
+# Crear el gráfico
+ggplot(data, aes(x = GDP, y = Jobless.Rate, label = name)) +
+  geom_point(color = "steelblue", size = 3, alpha = 0.7) +      # puntos
+  geom_smooth(method = "lm", se = TRUE, color = "darkred") +    # línea de tendencia
+  geom_text(vjust = -1, size = 3, check_overlap = TRUE) +       # nombres de países
+  labs(
+    title = "Relación entre el PIB y la tasa de desempleo",
+    subtitle = "Evaluación de cómo el crecimiento económico influye en el empleo",
+    x = "PIB (miles de millones USD)",
+    y = "Tasa de desempleo (%)"
+  ) +
+  theme_minimal()
+
+```
+
+```{r, echo=FALSE}
+# Instalar (si no tienes) y cargar librerías necesarias
+#install.packages("ggplot2")
+library(ggplot2)
+
+# Cargar base de datos
+data <- read.csv("base_de_datos.csv")
+
+# Limpiar datos: eliminar filas con valores faltantes en las variables clave
+data <- na.omit(data[, c("GDP", "Jobless.Rate", "name")])
+
+# Crear el gráfico
+ggplot(data, aes(x = GDP, y = Jobless.Rate, label = name)) +
+  geom_point(color = "steelblue", size = 3, alpha = 0.7) +      # puntos
+  geom_smooth(method = "lm", se = TRUE, color = "darkred") +    # línea de tendencia
+  geom_text(vjust = -1, size = 3, check_overlap = TRUE) +       # nombres de países
+  labs(
+    title = "Relación entre el PIB y la tasa de desempleo",
+    subtitle = "Evaluación de cómo el crecimiento económico influye en el empleo",
+    x = "PIB (miles de millones USD)",
+    y = "Tasa de desempleo (%)"
+  ) +
+  theme_minimal()
+
+```
+
+```{r, echo=FALSE}
+library(ggplot2)
+
+# Cargar base de datos
+data <- read.csv("base_de_datos.csv")
+
+# Limpiar datos (eliminar valores faltantes)
+data <- na.omit(data[, c("latitude", "longitude", "GDP", "Jobless.Rate", "name")])
+
+# Crear gráfico tipo mapa de burbujas
+ggplot(data, aes(x = longitude, y = latitude)) +
+  geom_point(aes(size = GDP, color = Jobless.Rate), alpha = 0.7) +
+  scale_size_continuous(range = c(2, 12)) +
+  scale_color_gradient(low = "skyblue", high = "darkred") +
+  labs(
+    title = "PIB y tasa de desempleo en el mundo",
+    subtitle = "El tamaño representa el PIB y el color la tasa de desempleo",
+    x = "Longitud",
+    y = "Latitud",
+    size = "PIB (miles de millones USD)",
+    color = "Tasa de desempleo (%)"
+  ) +
+  theme_minimal()
+
+
+```
+
+```{r, echo=FALSE}
+ggplot(data, aes(x = GDP, y = Jobless.Rate, label = name)) +
+  geom_point(color = "steelblue", size = 3, alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, color = "darkred") +
+  geom_text(vjust = -1, size = 3, check_overlap = TRUE) +
+  scale_x_log10() +  # Escala logarítmica
+  labs(
+    title = "Relación entre el PIB (escala logarítmica) y la tasa de desempleo",
+    subtitle = "La transformación logarítmica permite comparar mejor economías grandes y pequeñas",
+    x = "PIB (log10 de miles de millones USD)",
+    y = "Tasa de desempleo (%)"
+  ) +
+  theme_minimal()
+
+
+```
+
+```{r, echo=FALSE}
+
+# Instalar librerías si no las tienes
+#install.packages(c("ggplot2", "maps"))
+
+# Cargar librerías
+library(ggplot2)
+library(maps)
+
+# Cargar base de datos
+data <- read.csv("base_de_datos.csv")
+
+# Limpiar datos (solo las columnas necesarias y eliminar NAs)
+data <- na.omit(data[, c("latitude", "longitude", "GDP", "Jobless.Rate", "name")])
+
+# Cargar datos del mapa mundial
+world <- map_data("world")
+
+# Crear el mapa
+ggplot() +
+  geom_map(data = world, map = world,
+           aes(x = long, y = lat, map_id = region),
+           color = "gray80", fill = "gray95", size = 0.3) +
+  geom_point(data = data,
+             aes(x = longitude, y = latitude,
+                 size = GDP, color = Jobless.Rate),
+             alpha = 0.7) +
+  scale_size_continuous(range = c(2, 10)) +
+  scale_color_gradient(low = "skyblue", high = "darkred") +
+  labs(
+    title = "PIB y Tasa de Desempleo en el Mundo",
+    subtitle = "El tamaño del punto representa el PIB (miles de millones USD)\nEl color representa la tasa de desempleo (%)",
+    x = "Longitud",
+    y = "Latitud",
+    size = "PIB",
+    color = "Tasa de desempleo"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.background = element_rect(fill = "aliceblue"),
+    panel.grid = element_blank(),
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 11)
+  )
+
+```
+```{r, echo=FALSE}
+library(viridis)
+
+ggplot() +
+  geom_map(data = world, map = world,
+           aes(x = long, y = lat, map_id = region),
+           color = "gray80", fill = "gray95", size = 0.3) +
+  geom_point(data = data,
+             aes(x = longitude, y = latitude,
+                 size = GDP, color = Jobless.Rate),
+             alpha = 0.8) +
+  scale_size_continuous(range = c(2, 10)) +
+  scale_color_viridis(option = "C", direction = -1) +
+  labs(
+    title = "PIB y Tasa de Desempleo en el Mundo",
+    subtitle = "Escala de color viridis para mejor contraste y legibilidad",
+    x = "Longitud",
+    y = "Latitud",
+    size = "PIB (miles de millones USD)",
+    color = "Tasa de desempleo (%)"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.background = element_rect(fill = "aliceblue"),
+    panel.grid = element_blank(),
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 11)
+  )
+
+```
+
+```{r, echo=FALSE}
+
+library(ggplot2)
+
+data <- read.csv("base_de_datos.csv")
+data <- na.omit(data[, c("GDP", "Jobless.Rate", "name", "region")])
+
+ggplot(data, aes(x = GDP, y = Jobless.Rate, color = region)) +
+  geom_point(size = 3, alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, color = "black") +
+  scale_x_log10() +
+  labs(
+    title = "Relación entre el PIB y la Tasa de Desempleo",
+    subtitle = "Escala logarítmica del PIB. La línea negra muestra la tendencia lineal.",
+    x = "PIB (escala logarítmica, miles de millones USD)",
+    y = "Tasa de desempleo (%)",
+    color = "Región"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 11)
+  )
+```
+
+```{r, echo=FALSE}
+
+library(ggplot2)
+data <- read.csv("base_de_datos.csv")
+library(dplyr)
+library(ggplot2)
+
+# Crear el objeto inflacion
+inflacion <- data %>%
+  select(name, region, Inflation.Rate) %>%  # cambia el nombre si es distinto
+  na.omit()
+
+# Boxplot por región
+ggplot(inflacion, aes(x = region, y = Inflation.Rate, fill = region)) +
+  geom_boxplot(alpha = 0.7, outlier.color = "red") +
+  labs(
+    title = "Variabilidad de la Inflación entre Regiones",
+    subtitle = "Comparación del nivel y dispersión de la inflación por región",
+    x = "Región",
+    y = "Tasa de inflación (%)",
+    fill = "Región"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    axis.text.x = element_text(angle = 30, hjust = 1)
+  )
+
+```
+
+```{r}
+
+# Volver a cargar la base completa
+data <- read.csv("base_de_datos.csv")
+
+# Instalar librerías si hace falta
+# install.packages(c("ggplot2", "dplyr"))
+
+library(ggplot2)
+library(dplyr)
+
+# Seleccionar las columnas necesarias
+inflacion <- data %>%
+  select(name, region, Inflation.Rate) %>%
+  na.omit()
+
+# ======================
+# 1️⃣ Boxplot por región
+# ======================
+ggplot(inflacion, aes(x = region, y = Inflation.Rate, fill = region)) +
+  geom_boxplot(alpha = 0.7, outlier.color = "red") +
+  labs(
+    title = "Variabilidad de la inflación entre regiones",
+    subtitle = "El boxplot muestra la dispersión y los valores atípicos",
+    x = "Región",
+    y = "Tasa de inflación (%)",
+    fill = "Región"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    axis.text.x = element_text(angle = 30, hjust = 1)
+  )
+
+# ======================
+# 2️⃣ Gráfico de barras (promedio por región)
+# ======================
+inflacion_promedio <- inflacion %>%
+  group_by(region) %>%
+  summarise(Inflacion_Promedio = mean(Inflation.Rate, na.rm = TRUE)) %>%
+  arrange(desc(Inflacion_Promedio))
+
+ggplot(inflacion_promedio, aes(x = reorder(region, -Inflacion_Promedio),
+                               y = Inflacion_Promedio, fill = region)) +
+  geom_bar(stat = "identity", alpha = 0.8) +
+  geom_text(aes(label = round(Inflacion_Promedio, 2)), vjust = -0.5, size = 3.5) +
+  labs(
+    title = "Inflación promedio por región",
+    subtitle = "Comparación del nivel promedio de inflación entre regiones",
+    x = "Región",
+    y = "Inflación promedio (%)",
+    fill = "Región"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    axis.text.x = element_text(angle = 30, hjust = 1)
+  )
+
+
+```
+
+
+```{r}
+# Instalar y cargar librerías necesarias
+# install.packages(c("ggplot2", "dplyr", "maps"))
+
+library(ggplot2)
+library(dplyr)
+library(maps)
+
+# Cargar los datos
+data <- read.csv("base_de_datos.csv")
+
+# Limpiar datos: solo países con información de inflación
+inflacion_map <- data %>%
+  select(name, Inflation.Rate) %>%
+  na.omit()
+
+# Datos del mapa mundial
+world <- map_data("world")
+
+# Unir la base de inflación con el mapa (por nombre del país)
+mapa_inflacion <- left_join(world, inflacion_map, by = c("region" = "name"))
+
+# Crear el mapa
+ggplot(mapa_inflacion, aes(x = long, y = lat, group = group, fill = Inflation.Rate)) +
+  geom_polygon(color = "gray70", size = 0.2) +
+  scale_fill_gradientn(
+    colors = c("darkblue", "skyblue", "yellow", "orange", "red", "darkred"),
+    na.value = "white",
+    name = "Inflación (%)"
+  ) +
+  labs(
+    title = "Mapa mundial de inflación",
+    subtitle = "El color representa la tasa de inflación promedio por país",
+    x = "",
+    y = ""
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 15),
+    plot.subtitle = element_text(size = 11),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid = element_blank()
+  )
+
+```
+
+```{r}
+ggplot(data, aes(x = reorder(name, Inflation.Rate),
+                 y = Inflation.Rate,
+                 fill = region)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_fill_brewer(palette = "Set2") +
+  labs(
+    title = "Inflación por país y región",
+    subtitle = "Comparación de la inflación individual por país",
+    x = "País",
+    y = "Tasa de inflación (%)",
+    fill = "Región"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 15),
+    axis.text.y = element_text(size = 7)
+  )
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Calcular inflación promedio por región
+inflacion_promedio <- data %>%
+  group_by(region) %>%
+  summarise(Inflacion_Promedio = mean(Inflation.Rate, na.rm = TRUE)) %>%
+  arrange(desc(Inflacion_Promedio))
+
+# Gráfico de barras con escala de color (azul = baja, rojo = alta inflación)
+ggplot(inflacion_promedio, aes(x = reorder(region, Inflacion_Promedio),
+                               y = Inflacion_Promedio,
+                               fill = Inflacion_Promedio)) +
+  geom_col(alpha = 0.9) +
+  coord_flip() +
+  scale_fill_gradient(low = "skyblue", high = "darkred") +
+  geom_text(aes(label = round(Inflacion_Promedio, 2)), hjust = -0.2, size = 3.8) +
+  labs(
+    title = "Inflación promedio por región",
+    subtitle = "Comparación del nivel general de inflación en el mundo",
+    x = "Región",
+    y = "Inflación promedio (%)",
+    fill = "Nivel de inflación"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 15),
+    axis.text.y = element_text(size = 11),
+    panel.grid.minor = element_blank()
+  )
+```

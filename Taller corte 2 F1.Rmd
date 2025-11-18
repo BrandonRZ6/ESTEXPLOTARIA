@@ -1,0 +1,188 @@
+---
+title: "Talle corte2: Mapeando la Seguridad Vial"
+author: "Tu nombre"
+date: "30 de septiembre de 2025"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: spacelab
+    code_folding: show
+---
+
+# Sección 1: Exploración numérica
+
+```{r}
+
+library(readr)
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+datos <- read_csv("C:/Users/brand/OneDrive/Escritorio/UNIVERSIDAD/ESTEXPLOTARIA/combined_collisions_v3.csv")
+
+```
+
+## Vista general: Muestra un resumen con summary() del data frame.
+```{r}
+
+summary(datos)
+
+```
+## Estadísticas clave: Para Number_of_Casualties y Speed_limit, calcula: media, mediana, desviación estándar y cuartiles (Q1, Q3).
+
+```{r}
+
+summary(datos$Number_of_Casualties)
+sd(datos$Number_of_Casualties)
+
+```
+
+```{r}
+
+summary(datos$Speed_limit)
+sd(datos$Speed_limit, na.rm = TRUE)
+
+```
+### Los datos tienen una distribuccion simetrica.
+
+## Análisis por grupos:
+
+```{r}
+table(datos$Accident_Severity)
+```
+
+# Sección 2: Exploración gráfica
+
+## Histograma de Speed_limit. Explica por qué elegiste este gráfico y qué te dice sobre el contexto vial.
+
+```{r}
+ggplot(datos, aes(x = factor(Speed_limit))) +
+  geom_bar(fill = "blue",na.rm = TRUE) +
+  labs(title = "Numeros de accidentes por velocidad minima",
+       x = "Limite de velocidad", y = "Conteo") +
+  theme_minimal()
+```
+
+
+## Boxplot de Number_of_Casualties según Accident_Severity. ¿Qué revela sobre la variabilidad entre grupos?
+
+```{r}
+ggplot(datos,
+       aes(x = reorder(Accident_Severity, Number_of_Casualties, median, na.rm = TRUE),
+           y = Number_of_Casualties,)) +
+  geom_boxplot(outlier.alpha = 0.2) +
+  labs(title = "Numbero de afectados por gravedad",
+       x = "Nivel de Gravedad", y = "Numbero de afectados") +
+  theme_minimal()
+```
+
+
+## Gráfico de dispersión entre aadf_Pedal_cycles (eje X) y aadf_Cars_and_taxis (eje Y). Filtra los NAs y añade una línea de regresión simple.
+
+```{r}
+df_scatter <- datos %>%
+  mutate(
+    aadf_Pedal_cycles   = as.numeric(aadf_Pedal_cycles),
+    aadf_Cars_and_taxis = as.numeric(aadf_Cars_and_taxis)
+  ) %>%
+  filter(!is.na(aadf_Pedal_cycles), !is.na(aadf_Cars_and_taxis))
+
+ggplot(df_scatter, aes(x = aadf_Pedal_cycles, y = aadf_Cars_and_taxis)) +
+  geom_point(alpha = 0.4, size = 1.2) +
+  geom_smooth(method = "lm", se = TRUE, linewidth = 0.9, linetype = 2) +
+  labs(title = "Dispersion: bicicletas vs carros/taxis",
+       x = "aadf_Pedal_cycles",
+       y = "aadf_Cars_and_taxis") +
+  theme_minimal()
+```
+
+
+# Sección 3: Limpieza y análisis profundo
+
+## Datos Faltantes
+
+```{r}
+total <- nrow(datos)
+
+na_summary <- tibble(
+  variable = c("Time", "Speed_limit"),
+  n_na     = c(sum(is.na(datos$Time)),
+               sum(is.na(datos$Speed_limit)))
+) %>%
+  mutate(pct_na = round(100 * n_na / total))
+
+na_summary
+```
+
+
+## Valores atípicos
+
+```{r}
+
+```
+
+
+## Comparación entre zonas urbanas y rurales
+
+# Sección 4: Análisis temporal
+
+## Preparación de datos
+
+## Agregación
+
+## Visualización
+
+# Sección 5: Análisis geográfico
+
+## Mapa de dispersión por gravedad
+
+```{r}
+df_geo <- datos %>%
+  mutate(
+    Longitude = as.numeric(Longitude),
+    Latitude  = as.numeric(Latitude),
+    Accident_Severity = factor(Accident_Severity)
+  ) %>%
+  filter(!is.na(Longitude), !is.na(Latitude))
+
+
+ggplot(df_geo, aes(x = Longitude, y = Latitude, color = Accident_Severity)) +
+  geom_point(alpha = 0.3, size = 0.6) +
+  coord_fixed() +
+  labs(title = "Mapa de dispersion por gravedad",
+       x = "Longitude", y = "Latitude", color = "Severidad") +
+  theme_minimal()
+```
+### Diagrama de dispersión: El diagrama de dispersión muestra la ubicación de cada accidente individual y su gravedad. Es útil para visualizar la distribución de accidentes y, potencialmente, identificar zonas con alta concentración de accidentes graves. Sin embargo, con un gran número de puntos de datos, puede sobredimensionarse, lo que dificulta la visualización de los patrones subyacentes y las zonas con mayor densidad de accidentes.
+
+## Mapa de densidad (hotspots)
+
+```{r}
+ggplot(df_geo, aes(x = Longitude, y = Latitude)) +
+  stat_density_2d(aes(fill = ..level..), geom = "polygon", alpha = 0.6) +
+  coord_fixed() +
+  scale_fill_viridis_c() +
+  labs(title = "Hotspots de accidentes (densidad 2D)",
+       x = "Longitude", y = "Latitude", fill = "Densidad") +
+  theme_minimal()
+```
+### Mapa de densidad: El mapa de densidad, o mapa de calor, visualiza la concentración de accidentes en el mapa. Las zonas con mayor densidad de accidentes se muestran en colores más cálidos (rojo), mientras que las zonas con menor densidad se muestran en colores más fríos (azul). Este tipo de mapa es excelente para identificar puntos críticos: zonas con un número particularmente alto de accidentes, independientemente de su gravedad. Ayuda a visualizar las zonas de riesgo generales de un vistazo, algo que podría no ser evidente a simple vista en el diagrama de dispersión debido a la sobredimensión.
+
+
+# 5. Preguntas de reflexión 
+
+## ¿Hay superposición entre las zonas con más accidentes (hotspots) y las que concentran los accidentes más graves?
+
+### El diagrama de dispersión (Accident_Severity) y el mapa de densidad muestran cierta coincidencia entre las zonas con alta frecuencia de accidentes y aquellas con mayor gravedad, sobre todo en centros urbanos y carreteras principales. Sin embargo, el mapa refleja la frecuencia general, mientras que el diagrama distingue la gravedad. Algunos puntos críticos concentran muchos accidentes leves, y otros, menos frecuentes, presentan mayor severidad. Para confirmar el solapamiento, sería útil generar un mapa de densidad solo de accidentes graves.
+
+## ¿Qué medida es más adecuada para describir el número típico de heridos: la media o la mediana? ¿Por qué?
+
+### En Number_of_Casualties, la media (1038) supera ligeramente a la mediana (1000), lo que sugiere un sesgo en los datos. Dado que el valor máximo (16) es un atípico considerable frente a la mediana, esta última resulta más adecuada para representar el número “típico” de víctimas, pues es menos sensible a valores extremos que la media.
+
+## ¿Por qué una correlación entre flujo de bicicletas y coches no implica causalidad? Menciona un posible factor de confusión.
+
+### La correlación entre el tráfico de bicicletas y automóviles no implica causalidad, ya que solo muestra que ambas variables varían juntas. Un factor externo, como el entorno urbano, podría influir en ambas: las zonas urbanas suelen concentrar más bicicletas por desplazamientos y ocio, y más autos por densidad poblacional y demanda de transporte. Así, es más probable que el contexto urbano afecte a ambos tipos de tráfico, y no que uno cause al otro.
+
+## Si tuvieras que recomendar una intervención de seguridad vial con base en tu análisis, ¿cuál sería y por qué?
+
+### Según el mapa de densidad, las intervenciones de seguridad vial deberían centrarse en las zonas con mayor concentración de accidentes. Se recomienda mejorar la infraestructura y señalización, reforzar el control policial, aplicar medidas de moderación del tráfico y realizar campañas de concienciación sobre las causas más comunes. Enfocar los recursos en estos puntos críticos permitiría una reducción más eficiente de los accidentes.

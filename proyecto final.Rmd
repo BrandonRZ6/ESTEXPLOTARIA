@@ -1,0 +1,441 @@
+---
+title: "Clase 17 de Septiembre"
+author: "Javier Mauricio Sierra"
+#date: "`r Sys.Date()`"
+output:
+  html_document:
+    css: rany_style.css
+    #theme: journal
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T,
+                      collapse = F,
+                      fig.align='center',
+                      warning=F,
+                      message=F,
+                      fig.height=6,
+                      fig.width=7.5,
+                      tidy = F,
+                      comment = "",
+                      prompt = F,
+                      highlight=T)
+library(DT)
+```
+```{r, echo=FALSE}
+library(tidyverse)
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(maps)
+
+
+data <- read.csv("base_de_datos.csv")
+```
+## Introducción
+
+La desigualdad económica es una de las problemáticas más persistentes a nivel mundial. 
+A pesar del crecimiento económico global, los países continúan mostrando grandes diferencias en sus niveles de desarrollo y bienestar. 
+Este análisis busca examinar algunos indicadores macroeconómicos claves como el Producto Interno Bruto (PIB) per cápita, la tasa de desempleo, la inflación y la deuda pública— con el fin de comprender mejor las diferencias y relaciones existentes entre ellos.
+
+### Objetivos
+
+**General:**  
+Analizar la desigualdad económica entre distintos países a partir de indicadores como el PIB, la tasa de desempleo, la inflación y la deuda pública, con el fin de identificar patrones, diferencias regionales y posibles factores asociados.
+
+Aplicar lo visto en clase analizando la desigualdad económica entre distintos países a partir de indicadores como el PIB, la tasa de desempleo, la inflación y la deuda pública, con el fin de identificar patrones, diferencias regionales y posibles factores asociados.
+
+**Específicos:**  
+1. Comparar el nivel de PIB per cápita entre los países para identificar diferencias significativas en el nivel de desarrollo económico.  
+2. Examinar la relación entre la tasa de desempleo y el PIB para evaluar cómo el crecimiento económico influye en el empleo.  
+3. Analizar la variabilidad de la inflación entre los países y su posible impacto en el poder adquisitivo y la estabilidad económica.  
+
+
+
+
+
+
+
+# 📊 Análisis Económico: PIB, Desempleo e Inflación
+
+  
+
+## 1. Nivel de PIB per cápita entre países
+
+### 🧩 Descripción del análisis
+Se examinó la relación entre el **Producto Interno Bruto (PIB)** y la **tasa de desempleo** de los países incluidos en la base de datos.  
+El objetivo fue evaluar **cómo el crecimiento económico influye en los niveles de empleo**.
+```{r}
+pib_region <- data %>%
+  group_by(region) %>%
+  summarize(mean_gdp = mean(GDP, na.rm = TRUE))
+
+#
+datatable(pib_region)
+
+```
+
+```{r}
+
+
+world_map <- map_data("world")
+
+
+continent_gdp <- data %>%
+  group_by(region) %>%
+  summarise(GDP_mean = mean(GDP, na.rm = TRUE))
+
+map_data_joined <- world_map %>%
+  left_join(data, by = c("region" = "name"))
+
+
+ggplot(map_data_joined, aes(map_id = region, fill = GDP)) +
+  geom_map(map = world_map, color = "gray40", size = 0.2) +
+  expand_limits(x = world_map$long, y = world_map$lat) +
+  scale_fill_viridis_c(option = "C", name = "PIB per cápita",
+                       trans = "log", labels = scales::comma) +
+  labs(
+    title = "Distribución del PIB per cápita por país",
+    subtitle = "Colores más claros indican mayor nivel económico",
+    x = "", y = ""
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    panel.grid = element_blank(),
+    axis.text = element_blank()
+  )
+```
+**Desigualdad global evidente:**  
+   El mapa mundial muestra una marcada diferencia entre los países con *altos niveles de PIB per cápita* (tonos claros) y aquellos con *niveles bajos* (tonos oscuros).  
+   - Las regiones de **América del Norte, Europa Occidental y Oceanía** presentan los valores más altos, reflejando economías desarrolladas.  
+   - En contraste, **África y partes de Asia y América Latina** muestran los valores más bajos, lo que indica un menor desarrollo económico.
+```{r}
+data <- read.csv("base_de_datos.csv")
+ggplot(data, aes(x = region, y = GDP, fill = region)) +
+  geom_boxplot(outlier.colour = "red", outlier.shape = 16, outlier.size = 2, alpha = 0.7) +
+  facet_wrap(~ region, scales = "free_y") +
+  scale_y_continuous(labels = scales::comma) +
+  labs(
+    title = "Distribución del PIB per cápita por continente",
+    subtitle = "Cada panel muestra la variabilidad económica dentro del continente",
+    x = "",
+    y = "PIB per cápita (USD)"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    strip.text = element_text(face = "bold", size = 12),
+    plot.title = element_text(face = "bold", size = 14),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank()
+  )
+```
+
+
+
+```{r}
+data <- read.csv("base_de_datos.csv")
+
+
+ ggplot(data, aes(x = region, y = GDP, fill = region)) +
+  geom_boxplot(outlier.colour = "red", outlier.shape = 16, outlier.size = 2, alpha = 0.7) +
+  facet_wrap(~ region, scales = "free_y") +
+  scale_y_log10(labels = scales::comma) +
+  labs(
+    title = "Distribución del PIB per cápita por continente (escala logarítmica)",
+    subtitle = "Cada panel muestra la variabilidad económica dentro del continente",
+    x = "",
+    y = "PIB per cápita (log10 de USD)"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    strip.text = element_text(face = "bold", size = 12),
+    plot.title = element_text(face = "bold", size = 14),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank()
+  )
+```
+**Variabilidad dentro de los continentes:**  
+   El gráfico de cajas (boxplot) permite observar que:  
+   - **Europa y Oceanía** presentan una distribución más compacta y centrada en valores altos, lo que indica **menor desigualdad económica interna**.  
+   - **África y América** muestran una dispersión amplia, evidenciando **brechas internas significativas** entre países de altos y bajos ingresos.  
+   - **Asia** combina países altamente desarrollados (como Japón y Corea del Sur) con otros de bajos ingresos, mostrando gran heterogeneidad.
+
+```{r}
+
+
+```
+
+### 📈 Resultados gráficos
+Las gráficas confirman que **el nivel de desarrollo económico a nivel mundial es desigual**.  
+   Los países con mayor PIB per cápita suelen concentrarse en el hemisferio norte y regiones industrializadas, mientras que los de menor ingreso se ubican principalmente en África y parte de América Latina.  
+   Esta disparidad sugiere diferencias estructurales en productividad, acceso a tecnología, educación e infraestructura.
+")
+  
+
+
+
+
+
+## 2. relación entre la tasa de desempleo y el PIB
+
+### 🧩 Descripción del análisis
+Se examinó la relación entre el **Producto Interno Bruto (PIB)** y la **tasa de desempleo** de los países incluidos en la base de datos. 
+```{r}
+
+
+
+
+library(ggplot2)
+library(maps)
+
+
+data <- read.csv("base_de_datos.csv")
+
+
+data <- na.omit(data[, c("latitude", "longitude", "GDP", "Jobless.Rate", "name")])
+
+world <- map_data("world")
+
+ggplot() +
+  geom_map(data = world, map = world,
+           aes(x = long, y = lat, map_id = region),
+           color = "gray80", fill = "gray95", size = 0.3) +
+  geom_point(data = data,
+             aes(x = longitude, y = latitude,
+                 size = GDP, color = Jobless.Rate),
+             alpha = 0.7) +
+  scale_size_continuous(range = c(2, 10)) +
+  scale_color_gradient(low = "skyblue", high = "darkred") +
+  labs(
+    title = "PIB y Tasa de Desempleo en el Mundo",
+    subtitle = "El tamaño del punto representa el PIB (miles de millones USD)\nEl color representa la tasa de desempleo (%)",
+    x = "Longitud",
+    y = "Latitud",
+    size = "PIB",
+    color = "Tasa de desempleo"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.background = element_rect(fill = "aliceblue"),
+    panel.grid = element_blank(),
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 11)
+  )
+
+```
+```{r}
+data <- read.csv("base_de_datos.csv")
+library(viridis)
+
+ggplot() +
+  geom_map(data = world, map = world,
+           aes(x = long, y = lat, map_id = region),
+           color = "gray80", fill = "gray95", size = 0.3) +
+  geom_point(data = data,
+             aes(x = longitude, y = latitude,
+                 size = GDP, color = Jobless.Rate),
+             alpha = 0.8) +
+  scale_size_continuous(range = c(2, 10)) +
+  scale_color_viridis(option = "C", direction = -1) +
+  labs(
+    title = "PIB y Tasa de Desempleo en el Mundo",
+    subtitle = "Escala de color viridis para mejor contraste y legibilidad",
+    x = "Longitud",
+    y = "Latitud",
+    size = "PIB (miles de millones USD)",
+    color = "Tasa de desempleo (%)"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.background = element_rect(fill = "aliceblue"),
+    panel.grid = element_blank(),
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 11)
+  )
+
+```
+El análisis del PIB per cápita evidencia grandes disparidades entre países y regiones.
+Las economías más desarrolladas, como las de América del Norte, Europa Occidental y parte de Asia Oriental, presentan PIB per cápita elevados, lo que refleja una mayor productividad, ingresos y capacidad de consumo.
+
+
+```{r}
+
+library(ggplot2)
+
+data <- read.csv("base_de_datos.csv")
+
+
+data <- na.omit(data[, c("GDP", "Jobless.Rate", "name", "region")])
+
+ggplot(data, aes(x = GDP, y = Jobless.Rate, color = region)) +
+  geom_point(size = 3, alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, color = "black") +
+  scale_x_log10() +
+  labs(
+    title = "Relación entre el PIB y la Tasa de Desempleo",
+    subtitle = "Escala logarítmica del PIB. La línea negra muestra la tendencia lineal.",
+    x = "PIB (escala logarítmica, miles de millones USD)",
+    y = "Tasa de desempleo (%)",
+    color = "Región"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 11)
+  )
+```
+En contraste, regiones como América Latina, África y parte del sur de Asia muestran valores considerablemente menores, lo que indica niveles de desarrollo económico más bajos y brechas significativas en el bienestar de la población.
+
+### 📊 Resultados gráficos
+las diferencias se visualizan claramente en el mapa económico mundial, donde el color y tamaño de los puntos o regiones permiten identificar la concentración del crecimiento en ciertos bloques económicos, mientras otras zonas se mantienen rezagadas.
+
+Estos resultados se relacionan con la **Ley de Okun**, que establece que un mayor crecimiento económico tiende a reducir el desempleo.  
+Aun así, los **factores estructurales** de cada país (políticas laborales, nivel educativo, tecnología, informalidad) modifican la magnitud de este efecto.
+
+
+
+### 💡 Interpretación económica
+Una alta variabilidad en la inflación refleja **pérdida del poder adquisitivo**, **depreciación monetaria** e **incertidumbre económica**.  
+Los países con inflación controlada disfrutan de **mayor estabilidad macroeconómica**, favoreciendo la inversión y el crecimiento.
+
+### ✅ Conclusión
+La inflación se consolida como un **indicador clave de estabilidad económica**.  
+Los países con inflación alta tienden a enfrentar **desequilibrios y pérdida del poder adquisitivo**, mientras que aquellos con inflación baja y estable mantienen **condiciones favorables para el crecimiento económico y social**.
+
+
+
+
+
+
+
+
+# 3. variabilidad de la inflación entre los países
+
+### 🧩 Descripción del análisis
+Se analizó la **variabilidad de la tasa de inflación** entre las diferentes regiones del mundo, con el propósito de evaluar su **impacto sobre el poder adquisitivo y la estabilidad económica**.
+
+```{r}
+library(dplyr)
+library(ggplot2)
+data <- read.csv("base_de_datos.csv")
+
+# Calcular inflación promedio por región
+inflacion_promedio <- data %>%
+  group_by(region) %>%
+  summarise(Inflacion_Promedio = mean(Inflation.Rate, na.rm = TRUE)) %>%
+  arrange(desc(Inflacion_Promedio))
+
+# Gráfico de barras con escala de color (azul = baja, rojo = alta inflación)
+ggplot(inflacion_promedio, aes(x = reorder(region, Inflacion_Promedio),
+                               y = Inflacion_Promedio,
+                               fill = Inflacion_Promedio)) +
+  geom_col(alpha = 0.9) +
+  coord_flip() +
+  scale_fill_gradient(low = "skyblue", high = "darkred") +
+  geom_text(aes(label = round(Inflacion_Promedio, 2)), hjust = -0.2, size = 3.8) +
+  labs(
+    title = "Inflación promedio por región",
+    subtitle = "Comparación del nivel general de inflación en el mundo",
+    x = "Región",
+    y = "Inflación promedio (%)",
+    fill = "Nivel de inflación"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 15),
+    axis.text.y = element_text(size = 11),
+    panel.grid.minor = element_blank()
+  )
+```
+
+```{r}
+# Instalar y cargar librerías necesarias
+# install.packages(c("ggplot2", "dplyr", "maps"))
+
+library(ggplot2)
+library(dplyr)
+library(maps)
+
+# Cargar los datos
+data <- read.csv("base_de_datos.csv")
+
+# Limpiar datos: solo países con información de inflación
+inflacion_map <- data %>%
+  select(name, Inflation.Rate) %>%
+  na.omit()
+
+# Datos del mapa mundial
+world <- map_data("world")
+
+# Unir la base de inflación con el mapa (por nombre del país)
+mapa_inflacion <- left_join(world, inflacion_map, by = c("region" = "name"))
+
+# Crear el mapa
+ggplot(mapa_inflacion, aes(x = long, y = lat, group = group, fill = Inflation.Rate)) +
+  geom_polygon(color = "gray70", size = 0.2) +
+  scale_fill_gradientn(
+    colors = c("darkblue", "skyblue", "yellow", "orange", "red", "darkred"),
+    na.value = "white",
+    name = "Inflación (%)"
+  ) +
+  labs(
+    title = "Mapa mundial de inflación",
+    subtitle = "El color representa la tasa de inflación promedio por país",
+    x = "",
+    y = ""
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 15),
+    plot.subtitle = element_text(size = 11),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid = element_blank()
+  )
+
+```
+
+
+### 📊 Resultados gráficos
+El **boxplot** mostró una **alta dispersión de la inflación en África**, con varios países que superan el 100%.  
+En contraste, **Europa y Oceanía** presentan niveles bajos y estables, mientras que **América Latina y Asia** exhiben valores intermedios con algunos picos extremos.  
+
+El **mapa mundial de inflación** confirmó esta tendencia: los tonos **rojos** concentran los países con **mayor inflación**, mientras que los **azules** representan **estabilidad de precios**.
+
+### 💡 Interpretación económica
+Una alta variabilidad en la inflación refleja **pérdida del poder adquisitivo**, **depreciación monetaria** e **incertidumbre económica**.  
+Los países con inflación controlada disfrutan de **mayor estabilidad macroeconómica**, favoreciendo la inversión y el crecimiento.
+
+### ✅ Conclusión
+La inflación se consolida como un **indicador clave de estabilidad económica**.  
+Los países con inflación alta tienden a enfrentar **desequilibrios y pérdida del poder adquisitivo**, mientras que aquellos con inflación baja y estable mantienen **condiciones favorables para el crecimiento económico y social**.
+
+
+
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```

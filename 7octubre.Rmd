@@ -1,0 +1,91 @@
+---
+title: "clase 7 de octubre"
+author: "Brandon"
+date: "2025-10-07"
+output: html_document
+---
+
+```{r}
+
+library(readr)
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+men_csv <- read_csv("C:/Users/brand/OneDrive/Escritorio/UNIVERSIDAD/ESTEXPLOTARIA/MEN_SNIES_test.csv")
+men_csv
+
+```
+
+```{r}
+
+
+```
+
+
+```{r}
+
+library(dplyr)
+#men_csv <- read_csv("C:/Users/brand/OneDrive/Escritorio/UNIVE'SIDAD/ESTEXPLOTARIA/MEN_SNIES_test.csv")
+POSGRADO_M <- filter(men_csv,Nivel Académico == posgrado,Nivel de Formación== maestria
+                     )
+POSGRADO_M
+```
+
+```{r}
+men_long <- men_csv %>%
+  pivot_longer(
+    cols = c(Graduados, Matriculados),
+    names_to = "Tipo",
+    values_to = "Cantidad"
+  )
+```
+
+
+```{r}
+# Gráfico
+ggplot(men_long, aes(x = Año, y = Cantidad, color = Tipo, group = Tipo)) +
+  geom_line(size = 1.1) +
+  geom_point(size = 2.5) +
+  facet_wrap(~ Sexo, ncol = 2) +
+  scale_color_manual(
+    values = c("Graduados" = "darkblue", "Matriculados" = "firebrick"),
+    name = "Categoría"
+  ) +
+  labs(
+    title = "Evolución de Graduados y Matriculados por Sexo",
+    x = "Año",
+    y = "Cantidad"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    strip.text = element_text(face = "bold", size = 13),
+    legend.position = "bottom"
+  )
+
+```
+
+```{r}
+ggplot(men_long, aes(x = Año, y = Cantidad, color = Tipo)) +
+
+  geom_line(size = 1) +
+
+  geom_point(size = 2) +
+
+  facet_wrap(~ Sexo, ncol = 1) +
+
+  labs(
+
+    title = "Evolución de Graduados y Matriculados por Sexo",
+
+    x = "Año",
+
+    y = "Cantidad",
+
+    color = "Categoría"
+
+  ) +
+
+  theme_minimal()
+ 
+
+```

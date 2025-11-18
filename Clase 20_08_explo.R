@@ -1,0 +1,6 @@
+library(readr)
+datos <- read_csv("C:/Users/brand/OneDrive/Escritorio/UNIVERSIDAD/base_de_datos.csv")
+head(datos)
+datos <- read_csv(file.choose())
+head(datos)
+install.packages('ggplot2')
