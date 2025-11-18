@@ -128,7 +128,9 @@ st.markdown("""
 # 🌍 Análisis de Desigualdad Económica Global
 
 **Autores:** Kevin Criollo y Brandon Rodriguez  
-**Institución:** Universidad Santo Tomas
+
+**Institución:** Universidad Santo Tomas  
+
 **Año:** 2025
 
 ---
