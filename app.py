@@ -1,4 +1,4 @@
-# app.py (Versión Mejorada Estética)
+   # app.py (Versión Mejorada Estética)
 # Proyecto Final: Análisis de Desigualdad Económica Global
 # Autores: Kevin Criollo y Brandon Rodriguez
 # Descripción: Dashboard interactivo para analizar PIB, desempleo e inflación
@@ -413,9 +413,6 @@ y distribución general de las principales variables.
 # ---------------------------
 # Pestaña Map
 # ---------------------------
-# ---------------------------
-# Pestaña Map
-# ---------------------------
 with tab_map:
     st.subheader("🗺️ Mapa Interactivo: Indicador por País")
 
@@ -469,6 +466,42 @@ with tab_map:
 
 
     st.plotly_chart(fig, use_container_width=True)
+
+    
+# ---------------------------
+# Pestaña Rankings (MEJORADA)
+# ---------------------------
+with tab_rank:
+    st.subheader("🏆 Rankings Económicos Globales")
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        metrics = [c for c in ["gdp","gdp_per_capita","inflation_rate","jobless_rate","debt_gdp","gdp_growth"] if c in df.columns]
+        metric = st.selectbox("📊 Indicador", metrics, index=0)
+    with col2:
+        order = st.radio("Orden", ["🔼 Mayor","🔽 Menor"], horizontal=True)
+    with col3:
+        n = st.slider("Top N", 5, 30, 10)
+    
+    df_rank = df_f.dropna(subset=[metric]).copy() if metric in df_f.columns else df_f.copy()
+    top = df_rank.nlargest(n, metric) if order=="🔼 Mayor" else df_rank.nsmallest(n, metric)
+    
+    fig = px.bar(
+        top.sort_values(metric, ascending=True), 
+        y="name", 
+        x=metric, 
+        orientation="h",
+        color=metric,
+        color_continuous_scale="Viridis",
+        text=metric,
+        title=f"🏆 Top {n} países — {metric}",
+        labels={"name": "País", metric: metric.replace("_", " ").title()}
+    )
+    fig.update_traces(texttemplate='%{text:.2f}', textposition='outside', marker=dict(line=dict(color='white', width=1)))
+    fig.update_layout(height=max(600, n*20), template="plotly_white", showlegend=False)
+    st.plotly_chart(fig, use_container_width=True)
+
+
 # ---------------------------
 # Pestaña Comparación Países
 # ---------------------------
