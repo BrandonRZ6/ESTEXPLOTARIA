@@ -1,4 +1,4 @@
-# app.py (versión optimizada y robusta)
+# app.py (Versión Mejorada Estética)
 # Proyecto Final: Análisis de Desigualdad Económica Global
 # Autores: Kevin Criollo y Brandon Rodriguez
 # Descripción: Dashboard interactivo para analizar PIB, desempleo e inflación
@@ -24,14 +24,13 @@ def snake(col):
     return col.lower()
 
 def safe_get(df, names):
-    """Devuelve la primera columna existente de la lista 'names' (nombres originales posibles)."""
     for n in names:
         if n in df.columns:
             return n
     return None
 
 # ---------------------------
-# Cargar y preprocesar datos (cacheado)
+# Cargar y preprocesar datos
 # ---------------------------
 @st.cache_data
 def load_and_prep_data(path="base_de_datos.csv"):
@@ -40,106 +39,78 @@ def load_and_prep_data(path="base_de_datos.csv"):
         raise FileNotFoundError(f"No se encontró {path.resolve()}")
     df = pd.read_csv(path, low_memory=False)
 
-    # Normalizar nombres: crear copia con columnas en snake_case
-    orig_cols = df.columns.tolist()
-    new_cols = {c: snake(c) for c in orig_cols}
-    df = df.rename(columns=new_cols)
+    # Normalizar columnas
+    df.rename(columns={c: snake(c) for c in df.columns}, inplace=True)
 
-    # Intentar parsear 'borders' si existe (puede estar con nombre borders u otro)
+    # Parse borders
     bcol = safe_get(df, ["borders", "borders_"])
     if bcol:
-        def parse_b(x):
-            try:
-                return literal_eval(x) if isinstance(x, str) and x.strip().startswith("[") else []
-            except Exception:
-                return []
-        df = df.assign(borders=df[bcol].apply(parse_b))
-        df = df.assign(n_borders=df["borders"].apply(len))
+        df["borders"] = df[bcol].apply(lambda x: literal_eval(x) if isinstance(x,str) and x.startswith("[") else [])
+        df["n_borders"] = df["borders"].apply(len)
     else:
         df["borders"] = [[] for _ in range(len(df))]
         df["n_borders"] = 0
 
-    # Columnas numéricas esperadas (lista de variantes posibles)
+    # Variables numéricas
     num_candidates = {
         "gdp": ["gdp","gdp_","gdp_total","gdp_usd"],
         "gdp_growth": ["gdp_growth","gdp_growth_","gdp_growth_percent"],
         "interest_rate": ["interest_rate","interest_rate_"],
         "inflation_rate": ["inflation_rate","inflation_rate_","inflation.rate"],
-        "jobless_rate": ["jobless_rate","jobless.rate","unemployment_rate","unemployment.rate"],
-        "gov_budget": ["gov_budget","gov._budget","gov_budget_"],
-        "debt_gdp": ["debt_gdp","debt/gdp","debt_gdp_","debt_percent"],
-        "current_account": ["current_account","current_account_"],
+        "jobless_rate": ["jobless_rate","jobless.rate","unemployment_rate"],
+        "gov_budget": ["gov_budget"],
+        "debt_gdp": ["debt_gdp","debt/gdp","debt_percent"],
+        "current_account": ["current_account"],
         "population": ["population","population_"],
         "area": ["area"],
         "latitude": ["latitude","lat"],
         "longitude": ["longitude","lon","long"]
     }
 
-    # Map actual names
     found_nums = {}
     for key, cand in num_candidates.items():
         found = safe_get(df, cand)
-        if found:
-            found_nums[key] = found
+        if found: found_nums[key] = found
 
-    # Forzar conversion a numerico
     for k, col in found_nums.items():
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    # Crear GDP per capita: suposiciones (GDP en miles de millones, Population en millones)
+    # GDP per capita
     gdp_col = found_nums.get("gdp")
     pop_col = found_nums.get("population")
     if gdp_col and pop_col:
         df["gdp_per_capita"] = np.where(
             (df[pop_col].notna()) & (df[pop_col] > 0),
-            (df[gdp_col] * 1e9) / (df[pop_col] * 1e6),
+            (df[gdp_col]*1e9)/(df[pop_col]*1e6),
             np.nan
         )
     else:
         df["gdp_per_capita"] = np.nan
 
-    # Asegurar lat/lon existencia
+    # Coordenadas
     lat_col = found_nums.get("latitude")
     lon_col = found_nums.get("longitude")
-    if lat_col:
-        df = df.rename(columns={lat_col: "latitude"})
-    if lon_col:
-        df = df.rename(columns={lon_col: "longitude"})
+    if lat_col: df.rename(columns={lat_col:"latitude"}, inplace=True)
+    if lon_col: df.rename(columns={lon_col:"longitude"}, inplace=True)
 
-    # Asegurar name, region, subregion si existen
-    name_col = safe_get(df, ["name", "country", "country_name"])
-    if name_col:
-        df = df.rename(columns={name_col: "name"})
-    region_col = safe_get(df, ["region", "continent", "region_"])
-    if region_col:
-        df = df.rename(columns={region_col: "region"})
-    subregion_col = safe_get(df, ["subregion", "sub_region"])
-    if subregion_col:
-        df = df.rename(columns={subregion_col: "subregion"})
+    # Nombre y región
+    name_col = safe_get(df, ["name","country"])
+    if name_col: df.rename(columns={name_col:"name"}, inplace=True)
+    region_col = safe_get(df, ["region","continent"])
+    if region_col: df.rename(columns={region_col:"region"}, inplace=True)
+    subregion_col = safe_get(df, ["subregion","sub_region"])
+    if subregion_col: df.rename(columns={subregion_col:"subregion"}, inplace=True)
 
-    # Valores numéricos comunes: rename to friendly names if exist
-    rename_map = {}
-    for k, cand in [("inflation_rate", ["inflation_rate","inflation_rate_","inflation.rate"]),
-                    ("jobless_rate", ["jobless_rate","unemployment_rate","jobless.rate"]),
-                    ("debt_gdp", ["debt_gdp","debt_percent","debt_gdp_"])]:
-        found = safe_get(df, cand)
-        if found:
-            rename_map[found] = k
-    if rename_map:
-        df = df.rename(columns=rename_map)
-
-    # Calcular promedios por region (si existe region)
+    # Promedios regionales
     if "region" in df.columns:
         agg_cols = [c for c in ["gdp_per_capita","gdp","gdp_growth","inflation_rate","jobless_rate","debt_gdp"] if c in df.columns]
         if agg_cols:
             region_stats = df.groupby("region")[agg_cols].mean().reset_index()
-            # renombrar
-            region_stats = region_stats.rename(columns={c: f"{c}_regional_avg" for c in agg_cols})
+            region_stats.rename(columns={c:f"{c}_regional_avg" for c in agg_cols}, inplace=True)
             df = df.merge(region_stats, on="region", how="left")
 
     return df
 
-# Cargar dataset
 try:
     df = load_and_prep_data("base_de_datos.csv")
 except FileNotFoundError as e:
@@ -150,7 +121,6 @@ except FileNotFoundError as e:
 # Configuración de la página
 # ---------------------------
 st.set_page_config(page_title="🌍 World Economics Dashboard", layout="wide", page_icon="🌎")
-
 # ---------------------------
 # PORTADA Y PRESENTACIÓN DEL PROYECTO
 # ---------------------------
@@ -159,7 +129,7 @@ st.markdown("""
 
 **Autores:** Kevin Criollo y Brandon Rodriguez  
 **Institución:** Universidad de Estudios Superiores  
-**Año:** 2024
+**Año:** 2025
 
 ---
 
@@ -441,127 +411,62 @@ y distribución general de las principales variables.
 # ---------------------------
 # Pestaña Map
 # ---------------------------
+# ---------------------------
+# Pestaña Map
+# ---------------------------
 with tab_map:
     st.subheader("🗺️ Mapa Interactivo: Indicador por País")
-    
-    # Verificar que tenemos columnas necesarias
-    has_geo = "latitude" in df.columns and "longitude" in df.columns
-    has_indicator = any(c in df.columns for c in ["gdp","gdp_per_capita","inflation_rate","jobless_rate","debt_gdp","gdp_growth"])
-    
-    if not has_geo:
-        st.error("❌ No hay coordenadas geográficas (latitude/longitude) en los datos")
-    elif not has_indicator:
-        st.error("❌ No hay indicadores económicos en los datos")
-    else:
-        # Construir lista de indicadores disponibles
-        indicator_options = []
-        if "gdp" in df.columns: 
-            indicator_options.append("gdp")
-        if "gdp_per_capita" in df.columns: 
-            indicator_options.append("gdp_per_capita")
-        if "inflation_rate" in df.columns: 
-            indicator_options.append("inflation_rate")
-        if "jobless_rate" in df.columns: 
-            indicator_options.append("jobless_rate")
-        if "debt_gdp" in df.columns: 
-            indicator_options.append("debt_gdp")
-        if "gdp_growth" in df.columns: 
-            indicator_options.append("gdp_growth")
-        if pop_col and pop_col in df.columns: 
-            indicator_options.append(pop_col)
 
-        if indicator_options:
-            indicator = st.selectbox("Selecciona el indicador", options=indicator_options, index=0, key="map_indicator")
-            
-            # Limpiar datos: solo filas con valor en el indicador y coordenadas válidas
-            df_plot = df_f[[c for c in ["latitude", "longitude", indicator, "name", "region", "subregion"] if c in df_f.columns]].copy()
-            df_plot = df_plot.dropna(subset=["latitude", "longitude", indicator])
-            
-            if len(df_plot) == 0:
-                st.warning("⚠️ No hay datos válidos para mostrar en el mapa después de aplicar filtros")
-            else:
-                st.success(f"✅ Mostrando {len(df_plot)} países en el mapa")
-                
-                # Preparar tamaño
-                if indicator in ["gdp", pop_col]:
-                    df_plot["size"] = np.log1p(df_plot[indicator].clip(lower=0)) + 5
-                else:
-                    df_plot["size"] = df_plot[indicator].abs().clip(lower=0.1) + 3
-                
-                # Preparar hover_data disponibles
-                hover_cols = [c for c in ["region","subregion","population","gdp","gdp_per_capita","inflation_rate","name"] if c in df_plot.columns]
-                
-                try:
-                    fig = px.scatter_geo(
-                        df_plot, 
-                        lat="latitude", 
-                        lon="longitude", 
-                        size="size", 
-                        color=indicator,
-                        hover_name="name" if "name" in df_plot.columns else None,
-                        hover_data=hover_cols,
-                        projection="natural earth", 
-                        color_continuous_scale="Viridis", 
-                        title=f"🗺️ {indicator} por País",
-                        size_max=50
-                    )
-                    fig.update_layout(
-                        margin={"r":0,"t":30,"l":0,"b":0}, 
-                        height=700,
-                        geo=dict(
-                            showland=True,
-                            landcolor='rgb(243, 243, 243)',
-                            coastcolor='rgb(204, 204, 204)'
-                        )
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Mostrar estadísticas
-                    st.subheader(f"📊 Estadísticas de {indicator}")
-                    col1, col2, col3, col4 = st.columns(4)
-                    col1.metric("Min", f"{df_plot[indicator].min():.2f}")
-                    col2.metric("Max", f"{df_plot[indicator].max():.2f}")
-                    col3.metric("Media", f"{df_plot[indicator].mean():.2f}")
-                    col4.metric("Mediana", f"{df_plot[indicator].median():.2f}")
-                    
-                except Exception as e:
-                    st.error(f"❌ Error al crear el mapa: {str(e)}")
-        else:
-            st.warning("⚠️ No hay indicadores disponibles para mostrar")
-
-# ---------------------------
-# Pestaña Rankings (MEJORADA)
-# ---------------------------
-with tab_rank:
-    st.subheader("🏆 Rankings Económicos Globales")
-    
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        metrics = [c for c in ["gdp","gdp_per_capita","inflation_rate","jobless_rate","debt_gdp","gdp_growth"] if c in df.columns]
-        metric = st.selectbox("📊 Indicador", metrics, index=0)
-    with col2:
-        order = st.radio("Orden", ["🔼 Mayor","🔽 Menor"], horizontal=True)
-    with col3:
-        n = st.slider("Top N", 5, 30, 10)
-    
-    df_rank = df_f.dropna(subset=[metric]).copy() if metric in df_f.columns else df_f.copy()
-    top = df_rank.nlargest(n, metric) if order=="🔼 Mayor" else df_rank.nsmallest(n, metric)
-    
-    fig = px.bar(
-        top.sort_values(metric, ascending=True), 
-        y="name", 
-        x=metric, 
-        orientation="h",
-        color=metric,
-        color_continuous_scale="Viridis",
-        text=metric,
-        title=f"🏆 Top {n} países — {metric}",
-        labels={"name": "País", metric: metric.replace("_", " ").title()}
+    # Indicadores disponibles en tu base procesada
+    indicator = st.selectbox(
+        "Selecciona el indicador",
+        options=[
+            "gdp", "gdp_per_capita", "inflation_rate", "jobless_rate",
+            "debt_gdp", "gdp_growth", "population"
+        ],
+        index=0
     )
-    fig.update_traces(texttemplate='%{text:.2f}', textposition='outside', marker=dict(line=dict(color='white', width=1)))
-    fig.update_layout(height=max(600, n*20), template="plotly_white", showlegend=False)
-    st.plotly_chart(fig, use_container_width=True)
 
+    # Validación de datos
+    df_plot = df_f.dropna(subset=["latitude", "longitude", indicator])
+
+    if df_plot.empty:
+        st.warning("⚠️ No hay datos suficientes para mostrar el mapa.")
+        st.stop()
+
+    # Tamaño del punto
+    if indicator in ["gdp", "population"]:
+        df_plot["size"] = np.log1p(df_plot[indicator]).clip(lower=1)
+    else:
+        df_plot["size"] = df_plot[indicator].abs().clip(lower=0.1)
+
+    fig = px.scatter_geo(
+        df_plot,
+        lat="latitude",
+        lon="longitude",
+        size="size",
+        color=indicator,
+        hover_name="name",
+        hover_data=[
+            "region", "subregion", "population",
+            "gdp", "gdp_per_capita", "inflation_rate"
+        ],
+        projection="natural earth",
+        color_continuous_scale="Viridis",
+        title=f"{indicator} por país"
+    )
+
+    fig.update_geos(
+    showland=True,
+    showocean=True,
+    oceancolor="LightBlue",
+    landcolor="LightGreen",
+    coastlinecolor="black",  # color de la costa
+    coastlinewidth=1
+)
+
+
+    st.plotly_chart(fig, use_container_width=True)
 # ---------------------------
 # Pestaña Comparación Países
 # ---------------------------
@@ -826,4 +731,4 @@ with tab_conclusions:
 # Pie de página
 # ---------------------------
 st.markdown("---")
-st.caption("💡 Datos: World Economics Database | Dashboard hecho con Streamlit + Plotly | Proyecto Final 2024")
+st.caption("💡 Datos: World Economics Database  Proyecto Final 2025")
