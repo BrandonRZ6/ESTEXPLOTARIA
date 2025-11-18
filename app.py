@@ -528,29 +528,84 @@ with tab_compare:
 # ---------------------------
 with tab_vs_region:
     st.subheader("🆚 País vs Promedio Regional")
+    
+    # Ordenar nombres de países
     names = sorted(df["name"].dropna().unique()) if "name" in df.columns else []
     country = st.selectbox("Selecciona un país", options=names)
+
     if country:
-        crow = df[df["name"]==country].iloc[0]
+        crow = df[df["name"] == country].iloc[0]
         region = crow.get("region", None)
-        inds = [c for c in ["gdp_per_capita","inflation_rate","jobless_rate","debt_gdp","gdp_growth"] if c in df.columns]
+        
+        # Lista completa de indicadores
+        inds = ["gdp_per_capita", "inflation_rate", "jobless_rate", "debt_gdp", "gdp_growth"]
+        inds = [c for c in inds if c in df.columns] # Filtrar solo los que existen en el DF
+
         country_vals, region_vals, labels = [], [], []
+
+        # Recopilación de datos
         for ind in inds:
             cv = crow.get(ind, np.nan)
-            rv = crow.get(f"{ind}_regional_avg", np.nan)
+            rv = crow.get(f"{ind}_regional_avg", np.nan) # Asumo que esta columna existe en tu DF
             if pd.notna(cv) and pd.notna(rv):
-                country_vals.append(cv); region_vals.append(rv); labels.append(ind)
+                country_vals.append(cv)
+                region_vals.append(rv)
+                labels.append(ind)
+
         if not labels:
             st.warning("No hay suficientes datos para esta comparación.")
         else:
-            comp_df = pd.DataFrame({"Indicador": labels*2, "Valor": country_vals+region_vals, "Tipo": ["País"]*len(labels)+[f"{region} avg"]*len(labels)})
-            fig = px.bar(comp_df, x="Indicador", y="Valor", color="Tipo", barmode="group", title=f"{country} vs {region} (promedio)")
-            st.plotly_chart(fig, use_container_width=True)
-            dif = np.array(country_vals)-np.array(region_vals)
-            pct = [f"{(cv-rv)/rv*100:+.1f}%" if rv!=0 else "N/A" for cv,rv in zip(country_vals,region_vals)]
-            table = pd.DataFrame({"Indicador":labels,"País":country_vals,"Región":region_vals,"Δ abs":dif,"Δ %":pct})
-            st.dataframe(table, use_container_width=True)
+            # 1. Crear el DataFrame Maestro
+            comp_df = pd.DataFrame({
+                "Indicador": labels * 2, 
+                "Valor": country_vals + region_vals, 
+                "Tipo": ["País"] * len(labels) + [f"{region} avg"] * len(labels)
+            })
 
+            # --- AQUÍ ESTÁ LA CORRECCIÓN VISUAL ---
+            
+            # Definimos qué indicadores son de "Dinero" (Escala grande) y cuáles de "Porcentaje" (Escala pequeña)
+            money_metrics = ["gdp_per_capita"]
+            pct_metrics = ["inflation_rate", "jobless_rate", "debt_gdp", "gdp_growth"]
+
+            # Filtramos el DF para crear dos gráficos distintos
+            df_money = comp_df[comp_df["Indicador"].isin(money_metrics)]
+            df_pct = comp_df[comp_df["Indicador"].isin(pct_metrics)]
+
+            # Creamos dos columnas en Streamlit
+            c1, c2 = st.columns(2)
+
+            with c1:
+                if not df_money.empty:
+                    st.markdown("**💰 Economía (Escala Alta)**")
+                    fig_money = px.bar(df_money, x="Indicador", y="Valor", color="Tipo", 
+                                     barmode="group", height=350)
+                    st.plotly_chart(fig_money, use_container_width=True)
+
+            with c2:
+                if not df_pct.empty:
+                    st.markdown("**📉 Indicadores % (Escala Baja)**")
+                    fig_pct = px.bar(df_pct, x="Indicador", y="Valor", color="Tipo", 
+                                   barmode="group", height=350)
+                    st.plotly_chart(fig_pct, use_container_width=True)
+
+            # --- FIN DE LA CORRECCIÓN VISUAL ---
+
+            # Tabla de datos (se mantiene igual, aquí no importa la escala)
+            dif = np.array(country_vals) - np.array(region_vals)
+            pct = [f"{(cv-rv)/rv*100:+.1f}%" if rv != 0 else "N/A" for cv, rv in zip(country_vals, region_vals)]
+            
+            table = pd.DataFrame({
+                "Indicador": labels,
+                "País": country_vals,
+                "Región": region_vals,
+                "Δ abs": dif,
+                "Δ %": pct
+            })
+            
+            st.write("---")
+            st.markdown("##### Detalle numérico")
+            st.dataframe(table, use_container_width=True)
 # ---------------------------
 # Pestaña Distribución (MEJORADA)
 # ---------------------------
