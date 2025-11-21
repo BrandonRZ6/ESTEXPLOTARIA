@@ -127,7 +127,7 @@ st.set_page_config(page_title="🌍 World Economics Dashboard", layout="wide", p
 st.markdown("""
 # 🌍 Análisis de Desigualdad Económica Global
 
-**Autores:** Paula rodriguez 
+**Autores:** Kevin criollo y Brandon Rodriguez 
 
 **Institución:** Universidad Santo Tomas  
 
